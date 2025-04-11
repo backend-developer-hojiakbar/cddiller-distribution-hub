@@ -9,12 +9,12 @@ const OrdersPage = () => {
   
   return (
     <PageLayout 
-      title="orders"
-      description="manage_your_orders_description"
+      title="Buyurtmalar"
+      description="Buyurtmalarni boshqarish"
     >
       <Card>
         <CardContent className="pt-6">
-          <p>{t('orders_page_content')}</p>
+          <p>Barcha buyurtmalar ro'yxati va ularning holati bu yerda ko'rsatiladi.</p>
         </CardContent>
       </Card>
     </PageLayout>

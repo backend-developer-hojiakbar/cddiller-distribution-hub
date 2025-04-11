@@ -9,12 +9,12 @@ const StoresPage = () => {
   
   return (
     <PageLayout 
-      title="stores"
-      description="manage_your_stores_description"
+      title="Do'konlar"
+      description="Do'konlar ro'yxatini boshqarish"
     >
       <Card>
         <CardContent className="pt-6">
-          <p>{t('stores_page_content')}</p>
+          <p>Do'konlar ro'yxati va ma'lumotlari bu yerda ko'rsatiladi.</p>
         </CardContent>
       </Card>
     </PageLayout>

@@ -9,12 +9,12 @@ const SettingsPage = () => {
   
   return (
     <PageLayout 
-      title="settings"
-      description="configure_your_account_settings_description"
+      title="Sozlamalar"
+      description="Tizim sozlamalarini o'zgartirish"
     >
       <Card>
         <CardContent className="pt-6">
-          <p>{t('settings_page_content')}</p>
+          <p>Tizim sozlamalari, profil ma'lumotlari va boshqa konfiguratsiyalar bu yerda boshqariladi.</p>
         </CardContent>
       </Card>
     </PageLayout>

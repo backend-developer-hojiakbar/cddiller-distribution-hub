@@ -9,12 +9,12 @@ const WarehousePage = () => {
   
   return (
     <PageLayout 
-      title="warehouse"
-      description="manage_your_warehouse_description"
+      title="Ombor"
+      description="Ombor ma'lumotlarini boshqarish"
     >
       <Card>
         <CardContent className="pt-6">
-          <p>{t('warehouse_page_content')}</p>
+          <p>Ombor ma'lumotlari va inventarizatsiya bu yerda ko'rsatiladi.</p>
         </CardContent>
       </Card>
     </PageLayout>

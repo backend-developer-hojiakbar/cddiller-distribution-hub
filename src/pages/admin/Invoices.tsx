@@ -9,12 +9,12 @@ const InvoicesPage = () => {
   
   return (
     <PageLayout 
-      title="invoices"
-      description="manage_your_invoices_description"
+      title="Hisob-fakturalar"
+      description="Hisob-fakturalarni boshqarish"
     >
       <Card>
         <CardContent className="pt-6">
-          <p>{t('invoices_page_content')}</p>
+          <p>Barcha hisob-fakturalar ro'yxati va to'lov ma'lumotlari bu yerda ko'rsatiladi.</p>
         </CardContent>
       </Card>
     </PageLayout>

@@ -9,12 +9,12 @@ const DealersPage = () => {
   
   return (
     <PageLayout 
-      title="dealers"
-      description="manage_your_dealers_description"
+      title="Dillerlar"
+      description="Dillerlar ro'yxatini boshqarish"
     >
       <Card>
         <CardContent className="pt-6">
-          <p>{t('dealers_page_content')}</p>
+          <p>Dillerlar ro'yxati va ma'lumotlari bu yerda ko'rsatiladi.</p>
         </CardContent>
       </Card>
     </PageLayout>

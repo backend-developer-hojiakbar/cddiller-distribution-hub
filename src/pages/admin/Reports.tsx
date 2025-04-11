@@ -9,12 +9,12 @@ const ReportsPage = () => {
   
   return (
     <PageLayout 
-      title="reports"
-      description="view_your_business_reports_description"
+      title="Hisobotlar"
+      description="Biznes hisobotlarini ko'rish"
     >
       <Card>
         <CardContent className="pt-6">
-          <p>{t('reports_page_content')}</p>
+          <p>Biznes hisobotlari, savdo statistikasi va tahlillar bu yerda ko'rsatiladi.</p>
         </CardContent>
       </Card>
     </PageLayout>

@@ -9,12 +9,12 @@ const TrashPage = () => {
   
   return (
     <PageLayout 
-      title="trash"
-      description="manage_deleted_items_description"
+      title="Axlat"
+      description="O'chirilgan elementlarni boshqarish"
     >
       <Card>
         <CardContent className="pt-6">
-          <p>{t('trash_page_content')}</p>
+          <p>O'chirilgan mahsulotlar, buyurtmalar va boshqa ma'lumotlar bu yerda ko'rsatiladi.</p>
         </CardContent>
       </Card>
     </PageLayout>

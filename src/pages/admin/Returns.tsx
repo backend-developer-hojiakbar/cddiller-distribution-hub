@@ -9,12 +9,12 @@ const ReturnsPage = () => {
   
   return (
     <PageLayout 
-      title="returns"
-      description="manage_product_returns_description"
+      title="Qaytarishlar"
+      description="Mahsulot qaytarishlarini boshqarish"
     >
       <Card>
         <CardContent className="pt-6">
-          <p>{t('returns_page_content')}</p>
+          <p>Qaytarilgan mahsulotlar ro'yxati va ma'lumotlari bu yerda ko'rsatiladi.</p>
         </CardContent>
       </Card>
     </PageLayout>
