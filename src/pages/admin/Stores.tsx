@@ -16,10 +16,10 @@ const StoresPage = () => {
   // Mock data for stores
   const stores = [
     { id: 1, name: 'Chilonzor Savdo Markazi', address: 'Chilonzor tumani, 19-kvartal', dealer: 'Alisher Toshmatov', status: 'active', orders: 156 },
-    { id: 2, name: 'Malika Bozori', address: 'Qatortol ko'chasi, 60A', dealer: 'Dilshod Karimov', status: 'active', orders: 98 },
-    { id: 3, name: 'Samarqand Darvoza', address: 'Karimov ko'chasi, 45', dealer: 'Nodira Azimova', status: 'inactive', orders: 23 },
+    { id: 2, name: 'Malika Bozori', address: "Qatortol ko'chasi, 60A", dealer: 'Dilshod Karimov', status: 'active', orders: 98 },
+    { id: 3, name: 'Samarqand Darvoza', address: "Karimov ko'chasi, 45", dealer: 'Nodira Azimova', status: 'inactive', orders: 23 },
     { id: 4, name: 'Chorsu Bozori', address: 'Eski shahar, Chorsu maydoni', dealer: 'Jahongir Raimov', status: 'active', orders: 217 },
-    { id: 5, name: 'Parkent Savdo Uyi', address: 'Parkent tumani, Markaziy ko'cha 12', dealer: 'Sevara Kamalova', status: 'pending', orders: 42 },
+    { id: 5, name: 'Parkent Savdo Uyi', address: "Parkent tumani, Markaziy ko'cha 12", dealer: 'Sevara Kamalova', status: 'pending', orders: 42 },
   ];
   
   const filteredStores = stores.filter(store => 
