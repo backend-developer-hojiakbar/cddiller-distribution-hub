@@ -1,18 +1,11 @@
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { toast } from '@/components/ui/use-toast';
+import { supabase, User } from '@/lib/supabase';
+import { Session } from '@supabase/supabase-js';
 
 // Define user roles
 export type UserRole = 'superadmin' | 'admin' | 'warehouse' | 'dealer' | 'agent' | 'store';
-
-// User interface
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: UserRole;
-  avatar?: string;
-}
 
 // Authentication context type
 interface AuthContextType {
@@ -21,59 +14,8 @@ interface AuthContextType {
   logout: () => void;
   isAuthenticated: boolean;
   isLoading: boolean;
+  session: Session | null;
 }
-
-// Demo users for testing
-const demoUsers = [
-  {
-    id: '1',
-    name: 'Super Admin',
-    email: 'superadmin@cddiller.com',
-    password: 'superadmin123',
-    role: 'superadmin' as UserRole,
-    avatar: '/assets/avatars/superadmin.png',
-  },
-  {
-    id: '2',
-    name: 'Admin',
-    email: 'admin@cddiller.com',
-    password: 'admin123',
-    role: 'admin' as UserRole,
-    avatar: '/assets/avatars/admin.png',
-  },
-  {
-    id: '3',
-    name: 'Warehouse Manager',
-    email: 'warehouse@cddiller.com',
-    password: 'warehouse123',
-    role: 'warehouse' as UserRole,
-    avatar: '/assets/avatars/warehouse.png',
-  },
-  {
-    id: '4',
-    name: 'Dealer',
-    email: 'dealer@cddiller.com',
-    password: 'dealer123',
-    role: 'dealer' as UserRole,
-    avatar: '/assets/avatars/dealer.png',
-  },
-  {
-    id: '5',
-    name: 'Agent',
-    email: 'agent@cddiller.com',
-    password: 'agent123',
-    role: 'agent' as UserRole,
-    avatar: '/assets/avatars/agent.png',
-  },
-  {
-    id: '6',
-    name: 'Store',
-    email: 'store@cddiller.com',
-    password: 'store123',
-    role: 'store' as UserRole,
-    avatar: '/assets/avatars/store.png',
-  },
-];
 
 // Create the context
 const AuthContext = createContext<AuthContextType>({
@@ -82,57 +24,98 @@ const AuthContext = createContext<AuthContextType>({
   logout: () => {},
   isAuthenticated: false,
   isLoading: true,
+  session: null,
 });
 
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Initialize Supabase auth
   useEffect(() => {
-    // Check for existing auth in localStorage
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (error) {
-        console.error('Failed to parse stored user:', error);
-        localStorage.removeItem('user');
+    setIsLoading(true);
+    
+    // Check for active session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setIsLoading(false);
+      
+      if (session) {
+        fetchUserProfile(session.user.id);
       }
-    }
-    setIsLoading(false);
+    });
+
+    // Set up auth change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, newSession) => {
+        setSession(newSession);
+        setIsLoading(false);
+        
+        if (newSession) {
+          await fetchUserProfile(newSession.user.id);
+        } else {
+          setUser(null);
+        }
+      }
+    );
+
+    // Cleanup on unmount
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
+  
+  // Fetch user profile data from profiles table
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+        
+      if (error) {
+        throw error;
+      }
+      
+      if (data) {
+        setUser(data as User);
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      setUser(null);
+    }
+  };
 
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
       
-      // Find user with matching credentials
-      const matchedUser = demoUsers.find(
-        u => u.email === email && u.password === password
-      );
-      
-      if (matchedUser) {
-        // Create user object without password
-        const { password, ...userWithoutPassword } = matchedUser;
-        setUser(userWithoutPassword);
-        localStorage.setItem('user', JSON.stringify(userWithoutPassword));
-        toast({
-          title: 'Login successful',
-          description: `Welcome back, ${userWithoutPassword.name}!`,
-        });
-        return true;
-      } else {
+      if (error) {
         toast({
           title: 'Login failed',
-          description: 'Invalid email or password',
+          description: error.message,
           variant: 'destructive',
         });
         return false;
       }
+      
+      if (data.user) {
+        toast({
+          title: 'Login successful',
+          description: `Welcome back!`,
+        });
+        return true;
+      }
+      
+      return false;
     } catch (error) {
       console.error('Login error:', error);
       toast({
@@ -146,9 +129,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('user');
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
+    setSession(null);
     toast({
       title: 'Logged out',
       description: 'You have been successfully logged out.',
@@ -163,6 +147,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         isAuthenticated: !!user,
         isLoading,
+        session,
       }}
     >
       {children}

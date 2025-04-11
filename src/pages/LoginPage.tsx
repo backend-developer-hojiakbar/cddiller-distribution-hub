@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -78,7 +77,7 @@ const LoginPage = () => {
     { label: "RUB (₽)", value: 'RUB' },
   ];
 
-  // Demo credentials
+  // Demo credentials - we'll keep these for ease of testing
   const demoCredentials = [
     { role: 'superadmin', email: 'superadmin@cddiller.com', password: 'superadmin123' },
     { role: 'admin', email: 'admin@cddiller.com', password: 'admin123' },
