@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import PageLayout from '@/components/PageLayout';
 import { Card, CardContent } from '@/components/ui/card';
@@ -16,16 +16,18 @@ const StoresPage = () => {
   const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Fetch stores using react-query
+  // Fetch stores using react-query - updated to use meta.onError
   const { data: stores, isLoading, isError } = useQuery({
     queryKey: ['stores'],
     queryFn: fetchStores,
-    onError: (error) => {
-      toast({
-        title: 'Error fetching stores',
-        description: error instanceof Error ? error.message : 'Unknown error occurred',
-        variant: 'destructive',
-      });
+    meta: {
+      onError: (error: Error) => {
+        toast({
+          title: 'Error fetching stores',
+          description: error.message,
+          variant: 'destructive',
+        });
+      }
     }
   });
   
@@ -46,11 +48,11 @@ const StoresPage = () => {
     );
   }
   
-  // Filter stores based on search query
+  // Filter stores based on search query - updated to use dealer_name
   const filteredStores = stores?.filter(store => 
     store.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     store.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (store.dealers?.name?.toLowerCase() || '').includes(searchQuery.toLowerCase())
+    (store.dealer_name?.toLowerCase() || '').includes(searchQuery.toLowerCase())
   ) || [];
   
   return (
@@ -106,7 +108,7 @@ const StoresPage = () => {
                       <TableCell>{store.id}</TableCell>
                       <TableCell className="font-medium">{store.name}</TableCell>
                       <TableCell>{store.address}</TableCell>
-                      <TableCell>{store.dealers?.name}</TableCell>
+                      <TableCell>{store.dealer_name}</TableCell>
                       <TableCell>
                         <Badge 
                           variant={

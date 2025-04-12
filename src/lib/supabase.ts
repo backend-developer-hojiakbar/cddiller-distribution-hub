@@ -2,11 +2,21 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Get Supabase credentials from the environment
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-// Create a Supabase client
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Create a Supabase client with fallback for development
+export const supabase = createClient(
+  supabaseUrl || 'https://your-project.supabase.co', 
+  supabaseAnonKey || 'your-anon-key'
+);
+
+// Show warning if credentials are missing
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn(
+    'Supabase URL or Anonymous Key is missing. Please make sure to set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables.'
+  );
+}
 
 // Database types - representing our tables
 export type User = {
@@ -26,6 +36,7 @@ export type Store = {
   status: 'active' | 'inactive' | 'pending';
   orders_count: number;
   created_at: string;
+  dealer_name?: string; // Add this field to store dealer name
 };
 
 export type Dealer = {

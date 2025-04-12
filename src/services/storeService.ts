@@ -1,4 +1,3 @@
-
 import { supabase, Store } from '@/lib/supabase';
 
 // Fetch all stores
@@ -13,7 +12,7 @@ export async function fetchStores(): Promise<Store[]> {
       status,
       orders_count,
       created_at,
-      dealers(name)
+      dealers:dealer_id(name)
     `)
     .order('created_at', { ascending: false });
 
@@ -22,7 +21,14 @@ export async function fetchStores(): Promise<Store[]> {
     throw error;
   }
 
-  return data || [];
+  // Transform the data to match our Store type
+  return (data || []).map(item => {
+    const { dealers, ...store } = item;
+    return {
+      ...store,
+      dealer_name: dealers?.name
+    } as Store;
+  });
 }
 
 // Fetch a single store by ID
@@ -37,7 +43,7 @@ export async function fetchStoreById(id: number): Promise<Store | null> {
       status,
       orders_count,
       created_at,
-      dealers(name)
+      dealers:dealer_id(name)
     `)
     .eq('id', id)
     .single();
@@ -47,7 +53,15 @@ export async function fetchStoreById(id: number): Promise<Store | null> {
     throw error;
   }
 
-  return data;
+  if (data) {
+    const { dealers, ...store } = data;
+    return {
+      ...store,
+      dealer_name: dealers?.name
+    } as Store;
+  }
+
+  return null;
 }
 
 // Create a new store

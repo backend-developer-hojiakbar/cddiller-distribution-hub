@@ -16,16 +16,18 @@ const DealersPage = () => {
   const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Fetch dealers using react-query
+  // Fetch dealers using react-query - updated to use onSettled instead of onError
   const { data: dealers, isLoading, isError } = useQuery({
     queryKey: ['dealers'],
     queryFn: fetchDealers,
-    onError: (error) => {
-      toast({
-        title: 'Error fetching dealers',
-        description: error instanceof Error ? error.message : 'Unknown error occurred',
-        variant: 'destructive',
-      });
+    meta: {
+      onError: (error: Error) => {
+        toast({
+          title: 'Error fetching dealers',
+          description: error.message,
+          variant: 'destructive',
+        });
+      }
     }
   });
   
