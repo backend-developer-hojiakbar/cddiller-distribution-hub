@@ -1,3 +1,4 @@
+
 import { supabase, Store } from '@/lib/supabase';
 
 // Fetch all stores
@@ -26,7 +27,7 @@ export async function fetchStores(): Promise<Store[]> {
     const { dealers, ...store } = item;
     return {
       ...store,
-      dealer_name: dealers?.name
+      dealer_name: dealers ? dealers.name : undefined
     } as Store;
   });
 }
@@ -57,7 +58,7 @@ export async function fetchStoreById(id: number): Promise<Store | null> {
     const { dealers, ...store } = data;
     return {
       ...store,
-      dealer_name: dealers?.name
+      dealer_name: dealers ? dealers.name : undefined
     } as Store;
   }
 

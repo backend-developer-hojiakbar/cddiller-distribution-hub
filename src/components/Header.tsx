@@ -191,7 +191,7 @@ const Header = ({ toggleSidebar }: HeaderProps) => {
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" className="relative h-8 w-8 rounded-full animate-fade-in">
             <Avatar className="h-8 w-8">
-              <AvatarImage src={user?.avatar} alt={user?.name} />
+              <AvatarImage src={user?.avatar_url} alt={user?.name} />
               <AvatarFallback>{user?.name.substring(0, 2).toUpperCase()}</AvatarFallback>
             </Avatar>
           </Button>
