@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -29,19 +30,62 @@ import { useLanguage, Language } from '@/contexts/LanguageContext';
 import { useCurrency, Currency } from '@/contexts/CurrencyContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Sun, Moon } from 'lucide-react';
+import { 
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage 
+} from '@/components/ui/form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import * as z from 'zod';
+
+const loginSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+});
+
+const signupSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters'),
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  role: z.enum(['superadmin', 'admin', 'warehouse', 'dealer', 'agent', 'store']),
+});
+
+type LoginFormValues = z.infer<typeof loginSchema>;
+type SignupFormValues = z.infer<typeof signupSchema>;
 
 const LoginPage = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [activeTab, setActiveTab] = useState<'login' | 'signup'>('login');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, isAuthenticated, user } = useAuth();
+  const { login, signup, isAuthenticated, user } = useAuth();
   const { language, setLanguage, t } = useLanguage();
   const { currency, setCurrency } = useCurrency();
   const { theme, toggleTheme } = useTheme();
 
   const from = location.state?.from?.pathname || '/';
+
+  const loginForm = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+  });
+
+  const signupForm = useForm<SignupFormValues>({
+    resolver: zodResolver(signupSchema),
+    defaultValues: {
+      name: '',
+      email: '',
+      password: '',
+      role: 'store',
+    },
+  });
 
   useEffect(() => {
     // If already authenticated, redirect to their dashboard
@@ -50,13 +94,26 @@ const LoginPage = () => {
     }
   }, [isAuthenticated, user, navigate]);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleLogin = async (values: LoginFormValues) => {
     setLoading(true);
     try {
-      const success = await login(email, password);
+      const success = await login(values.email, values.password);
       if (success) {
         // We'll be redirected by the useEffect above
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignup = async (values: SignupFormValues) => {
+    setLoading(true);
+    try {
+      const success = await signup(values.email, values.password, values.name, values.role as UserRole);
+      if (success) {
+        // After successful signup, switch to login tab
+        setActiveTab('login');
+        loginForm.setValue('email', values.email);
       }
     } finally {
       setLoading(false);
@@ -77,7 +134,7 @@ const LoginPage = () => {
     { label: "RUB (₽)", value: 'RUB' },
   ];
 
-  // Demo credentials - we'll keep these for ease of testing
+  // Demo credentials
   const demoCredentials = [
     { role: 'superadmin', email: 'superadmin@cddiller.com', password: 'superadmin123' },
     { role: 'admin', email: 'admin@cddiller.com', password: 'admin123' },
@@ -86,6 +143,14 @@ const LoginPage = () => {
     { role: 'agent', email: 'agent@cddiller.com', password: 'agent123' },
     { role: 'store', email: 'store@cddiller.com', password: 'store123' },
   ];
+
+  const fillDemoCredentials = (role: string) => {
+    const creds = demoCredentials.find(cred => cred.role === role);
+    if (creds) {
+      loginForm.setValue('email', creds.email);
+      loginForm.setValue('password', creds.password);
+    }
+  };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4 dark:from-slate-900 dark:to-slate-800">
@@ -124,7 +189,7 @@ const LoginPage = () => {
         </Button>
       </div>
       
-      <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[420px]">
+      <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[450px]">
         <div className="flex flex-col space-y-2 text-center mb-6">
           <h1 className="text-4xl font-bold tracking-tight text-primary">CDDiller</h1>
           <p className="text-muted-foreground">
@@ -134,144 +199,212 @@ const LoginPage = () => {
         
         <Card className="animate-fade-in">
           <CardHeader>
-            <CardTitle>{t('login')}</CardTitle>
-            <CardDescription>
-              {t('enter_credentials')}
-            </CardDescription>
+            <Tabs defaultValue="login" value={activeTab} onValueChange={(value) => setActiveTab(value as 'login' | 'signup')}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="login">{t('login')}</TabsTrigger>
+                <TabsTrigger value="signup">{t('signup')}</TabsTrigger>
+              </TabsList>
+            </Tabs>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleLogin}>
-              <div className="grid gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="email">{t('email')}</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="example@cddiller.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
+            {activeTab === 'login' ? (
+              <Form {...loginForm}>
+                <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4">
+                  <FormField
+                    control={loginForm.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t('email')}</FormLabel>
+                        <FormControl>
+                          <Input placeholder="example@cddiller.com" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="password">{t('password')}</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
+                  <FormField
+                    control={loginForm.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t('password')}</FormLabel>
+                        <FormControl>
+                          <Input type="password" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? t('logging_in') : t('login')}
-                </Button>
-              </div>
-            </form>
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? t('logging_in') : t('login')}
+                  </Button>
+                </form>
+              </Form>
+            ) : (
+              <Form {...signupForm}>
+                <form onSubmit={signupForm.handleSubmit(handleSignup)} className="space-y-4">
+                  <FormField
+                    control={signupForm.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t('name')}</FormLabel>
+                        <FormControl>
+                          <Input placeholder={t('your_name')} {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={signupForm.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t('email')}</FormLabel>
+                        <FormControl>
+                          <Input placeholder="example@cddiller.com" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={signupForm.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t('password')}</FormLabel>
+                        <FormControl>
+                          <Input type="password" placeholder="••••••••" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={signupForm.control}
+                    name="role"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t('role')}</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder={t('select_role')} />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="store">Store</SelectItem>
+                            <SelectItem value="dealer">Dealer</SelectItem>
+                            <SelectItem value="agent">Agent</SelectItem>
+                            <SelectItem value="warehouse">Warehouse</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="superadmin">Superadmin</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? t('signing_up') : t('signup')}
+                  </Button>
+                </form>
+              </Form>
+            )}
           </CardContent>
-          <CardFooter className="flex flex-col">
-            <div className="text-sm text-muted-foreground mb-4">{t('demo_accounts')}</div>
-            <Tabs defaultValue="superadmin" className="w-full">
-              <TabsList className="grid grid-cols-3 mb-4">
-                <TabsTrigger value="superadmin">Superadmin</TabsTrigger>
-                <TabsTrigger value="admin">Admin</TabsTrigger>
-                <TabsTrigger value="other">Other</TabsTrigger>
-              </TabsList>
-              <TabsContent value="superadmin" className="space-y-4">
-                <div className="flex flex-col space-y-1">
-                  <div className="text-sm font-medium">{t('email')}:</div>
-                  <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm">
-                    superadmin@cddiller.com
-                  </code>
-                </div>
-                <div className="flex flex-col space-y-1">
-                  <div className="text-sm font-medium">{t('password')}:</div>
-                  <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm">
-                    superadmin123
-                  </code>
-                </div>
-                <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    setEmail('superadmin@cddiller.com');
-                    setPassword('superadmin123');
-                  }}
-                  className="w-full"
-                >
-                  {t('autofill')}
-                </Button>
-              </TabsContent>
-              <TabsContent value="admin" className="space-y-4">
-                <div className="flex flex-col space-y-1">
-                  <div className="text-sm font-medium">{t('email')}:</div>
-                  <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm">
-                    admin@cddiller.com
-                  </code>
-                </div>
-                <div className="flex flex-col space-y-1">
-                  <div className="text-sm font-medium">{t('password')}:</div>
-                  <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm">
-                    admin123
-                  </code>
-                </div>
-                <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    setEmail('admin@cddiller.com');
-                    setPassword('admin123');
-                  }}
-                  className="w-full"
-                >
-                  {t('autofill')}
-                </Button>
-              </TabsContent>
-              <TabsContent value="other" className="space-y-4">
-                <Select onValueChange={(value) => {
-                  const selected = demoCredentials.find(cred => cred.role === value);
-                  if (selected) {
-                    setEmail(selected.email);
-                    setPassword(selected.password);
-                  }
-                }}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('select_role')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="warehouse">Warehouse</SelectItem>
-                    <SelectItem value="dealer">Dealer</SelectItem>
-                    <SelectItem value="agent">Agent</SelectItem>
-                    <SelectItem value="store">Store</SelectItem>
-                  </SelectContent>
-                </Select>
-                
-                <div className="flex flex-col space-y-1">
-                  <div className="text-sm font-medium">{t('email')}:</div>
-                  <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm">
-                    {email || 'example@cddiller.com'}
-                  </code>
-                </div>
-                <div className="flex flex-col space-y-1">
-                  <div className="text-sm font-medium">{t('password')}:</div>
-                  <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm">
-                    {password || '******'}
-                  </code>
-                </div>
-                <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    const warehouse = demoCredentials.find(cred => cred.role === 'warehouse');
-                    if (warehouse) {
-                      setEmail(warehouse.email);
-                      setPassword(warehouse.password);
-                    }
-                  }}
-                  className="w-full"
-                >
-                  {t('autofill')}
-                </Button>
-              </TabsContent>
-            </Tabs>
-          </CardFooter>
+          {activeTab === 'login' && (
+            <CardFooter className="flex flex-col">
+              <div className="text-sm text-muted-foreground mb-4">{t('demo_accounts')}</div>
+              <Tabs defaultValue="superadmin" className="w-full">
+                <TabsList className="grid grid-cols-3 mb-4">
+                  <TabsTrigger value="superadmin">Superadmin</TabsTrigger>
+                  <TabsTrigger value="admin">Admin</TabsTrigger>
+                  <TabsTrigger value="other">Other</TabsTrigger>
+                </TabsList>
+                <TabsContent value="superadmin" className="space-y-4">
+                  <div className="flex flex-col space-y-1">
+                    <div className="text-sm font-medium">{t('email')}:</div>
+                    <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm">
+                      superadmin@cddiller.com
+                    </code>
+                  </div>
+                  <div className="flex flex-col space-y-1">
+                    <div className="text-sm font-medium">{t('password')}:</div>
+                    <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm">
+                      superadmin123
+                    </code>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => fillDemoCredentials('superadmin')}
+                    className="w-full"
+                  >
+                    {t('autofill')}
+                  </Button>
+                </TabsContent>
+                <TabsContent value="admin" className="space-y-4">
+                  <div className="flex flex-col space-y-1">
+                    <div className="text-sm font-medium">{t('email')}:</div>
+                    <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm">
+                      admin@cddiller.com
+                    </code>
+                  </div>
+                  <div className="flex flex-col space-y-1">
+                    <div className="text-sm font-medium">{t('password')}:</div>
+                    <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm">
+                      admin123
+                    </code>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => fillDemoCredentials('admin')}
+                    className="w-full"
+                  >
+                    {t('autofill')}
+                  </Button>
+                </TabsContent>
+                <TabsContent value="other" className="space-y-4">
+                  <Select onValueChange={(value) => fillDemoCredentials(value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={t('select_role')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="warehouse">Warehouse</SelectItem>
+                      <SelectItem value="dealer">Dealer</SelectItem>
+                      <SelectItem value="agent">Agent</SelectItem>
+                      <SelectItem value="store">Store</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  
+                  <div className="flex flex-col space-y-1">
+                    <div className="text-sm font-medium">{t('email')}:</div>
+                    <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm">
+                      {loginForm.getValues('email') || 'example@cddiller.com'}
+                    </code>
+                  </div>
+                  <div className="flex flex-col space-y-1">
+                    <div className="text-sm font-medium">{t('password')}:</div>
+                    <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm">
+                      {loginForm.getValues('password') ? '••••••••' : '••••••••'}
+                    </code>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => fillDemoCredentials('warehouse')}
+                    className="w-full"
+                  >
+                    {t('autofill')}
+                  </Button>
+                </TabsContent>
+              </Tabs>
+            </CardFooter>
+          )}
         </Card>
       </div>
     </div>
