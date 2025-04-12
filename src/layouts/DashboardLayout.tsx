@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import Header from '@/components/Header';
+import Header from '@/components/header';
 import Sidebar from '@/components/Sidebar';
 import { cn } from '@/lib/utils';
 import { useEffect } from 'react';
