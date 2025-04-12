@@ -1,22 +1,12 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// Get Supabase credentials from the environment
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+// Use the provided Supabase credentials
+const supabaseUrl = 'https://flpimjforqtcqzwmrmcp.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZscGltamZvcnF0Y3F6d21ybWNwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ0MzA2ODAsImV4cCI6MjA2MDAwNjY4MH0.E_1NGhn1N_8JLD7oM2UGoNviyQuAyMiVc6eO5V7yKEQ';
 
-// Create a Supabase client with fallback for development
-export const supabase = createClient(
-  supabaseUrl || 'https://your-project.supabase.co', 
-  supabaseAnonKey || 'your-anon-key'
-);
-
-// Show warning if credentials are missing
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn(
-    'Supabase URL or Anonymous Key is missing. Please make sure to set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables.'
-  );
-}
+// Create a Supabase client with the provided credentials
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Database types - representing our tables
 export type User = {

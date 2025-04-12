@@ -27,7 +27,7 @@ export async function fetchStores(): Promise<Store[]> {
     const { dealers, ...store } = item;
     return {
       ...store,
-      dealer_name: dealers ? dealers.name : undefined
+      dealer_name: dealers && typeof dealers === 'object' ? dealers.name : undefined
     } as Store;
   });
 }
@@ -58,7 +58,7 @@ export async function fetchStoreById(id: number): Promise<Store | null> {
     const { dealers, ...store } = data;
     return {
       ...store,
-      dealer_name: dealers ? dealers.name : undefined
+      dealer_name: dealers && typeof dealers === 'object' ? dealers.name : undefined
     } as Store;
   }
 
