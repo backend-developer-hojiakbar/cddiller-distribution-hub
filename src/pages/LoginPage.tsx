@@ -29,7 +29,7 @@ import { useAuth, UserRole } from '@/contexts/AuthContext';
 import { useLanguage, Language } from '@/contexts/LanguageContext';
 import { useCurrency, Currency } from '@/contexts/CurrencyContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Sun, Moon } from 'lucide-react';
+import { Sun, Moon, ShieldCheck } from 'lucide-react';
 import { 
   Form,
   FormControl,
@@ -41,6 +41,16 @@ import {
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { toast } from '@/components/ui/use-toast';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -54,15 +64,23 @@ const signupSchema = z.object({
   role: z.enum(['superadmin', 'admin', 'warehouse', 'dealer', 'agent', 'store']),
 });
 
+const superadminSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters'),
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+});
+
 type LoginFormValues = z.infer<typeof loginSchema>;
 type SignupFormValues = z.infer<typeof signupSchema>;
+type SuperadminFormValues = z.infer<typeof superadminSchema>;
 
 const LoginPage = () => {
   const [activeTab, setActiveTab] = useState<'login' | 'signup'>('login');
   const [loading, setLoading] = useState(false);
+  const [isSuperadminDialogOpen, setIsSuperadminDialogOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, signup, isAuthenticated, user } = useAuth();
+  const { login, signup, isAuthenticated, user, createSuperadmin } = useAuth();
   const { language, setLanguage, t } = useLanguage();
   const { currency, setCurrency } = useCurrency();
   const { theme, toggleTheme } = useTheme();
@@ -84,6 +102,15 @@ const LoginPage = () => {
       email: '',
       password: '',
       role: 'store',
+    },
+  });
+
+  const superadminForm = useForm<SuperadminFormValues>({
+    resolver: zodResolver(superadminSchema),
+    defaultValues: {
+      name: 'Superadmin',
+      email: 'superadmin@cddiller.com',
+      password: 'superadmin123',
     },
   });
 
@@ -114,6 +141,26 @@ const LoginPage = () => {
         // After successful signup, switch to login tab
         setActiveTab('login');
         loginForm.setValue('email', values.email);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateSuperadmin = async (values: SuperadminFormValues) => {
+    setLoading(true);
+    try {
+      const success = await createSuperadmin(values.email, values.password, values.name);
+      if (success) {
+        setIsSuperadminDialogOpen(false);
+        toast({
+          title: 'Superadmin created',
+          description: 'You can now log in with the superadmin account',
+        });
+        
+        // After successful superadmin creation, auto-fill the login form
+        loginForm.setValue('email', values.email);
+        loginForm.setValue('password', values.password);
       }
     } finally {
       setLoading(false);
@@ -187,6 +234,77 @@ const LoginPage = () => {
         <Button variant="outline" size="icon" onClick={toggleTheme}>
           {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
         </Button>
+      </div>
+      
+      <div className="absolute top-4 left-4">
+        <Dialog open={isSuperadminDialogOpen} onOpenChange={setIsSuperadminDialogOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" className="flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5" />
+              Create Superadmin
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create Superadmin Account</DialogTitle>
+              <DialogDescription>
+                Create a superadmin account to manage the entire system.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <Form {...superadminForm}>
+              <form onSubmit={superadminForm.handleSubmit(handleCreateSuperadmin)} className="space-y-4">
+                <FormField
+                  control={superadminForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={superadminForm.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={superadminForm.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Password</FormLabel>
+                      <FormControl>
+                        <Input type="password" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <DialogFooter>
+                  <Button type="submit" disabled={loading}>
+                    {loading ? 'Creating...' : 'Create Superadmin'}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
       </div>
       
       <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[450px]">

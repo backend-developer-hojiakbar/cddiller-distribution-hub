@@ -29,6 +29,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   session: Session | null;
+  createSuperadmin: (email: string, password: string, name: string) => Promise<boolean>;
 }
 
 // Create the context
@@ -40,6 +41,7 @@ const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
   isLoading: true,
   session: null,
+  createSuperadmin: async () => false,
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -209,6 +211,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const createSuperadmin = async (email: string, password: string, name: string): Promise<boolean> => {
+    setIsLoading(true);
+    try {
+      console.log('Creating superadmin account:', email);
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+            role: 'superadmin',
+          },
+        }
+      });
+      
+      if (error) {
+        console.error('Superadmin creation error:', error);
+        toast({
+          title: 'Superadmin creation failed',
+          description: error.message,
+          variant: 'destructive',
+        });
+        return false;
+      }
+      
+      console.log('Superadmin creation successful:', data);
+      if (data.user) {
+        toast({
+          title: 'Superadmin created',
+          description: 'Superadmin account has been created successfully.',
+        });
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Superadmin creation error:', error);
+      toast({
+        title: 'Superadmin creation failed',
+        description: 'An error occurred during superadmin creation. Please try again.',
+        variant: 'destructive',
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const logout = async () => {
     try {
       console.log('Logging out');
@@ -239,6 +289,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated: !!user,
         isLoading,
         session,
+        createSuperadmin,
       }}
     >
       {children}
