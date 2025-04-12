@@ -190,6 +190,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       console.log('Signup successful:', data);
       if (data.user) {
+        // Manually create profile in case trigger doesn't work
+        try {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert([
+              { 
+                id: data.user.id,
+                name, 
+                email,
+                role,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              }
+            ])
+            .select()
+            .single();
+            
+          if (profileError) {
+            console.error('Error creating profile:', profileError);
+          }
+        } catch (profileError) {
+          console.error('Error creating profile:', profileError);
+        }
+        
         toast({
           title: 'Signup successful',
           description: 'Your account has been created successfully.',
@@ -215,6 +239,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     try {
       console.log('Creating superadmin account:', email);
+      // Step 1: Create the user through Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -236,11 +261,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
       
-      console.log('Superadmin creation successful:', data);
+      console.log('Superadmin auth created successfully:', data);
       if (data.user) {
+        // Step 2: Manually create the profile entry to ensure it exists
+        try {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert([
+              { 
+                id: data.user.id,
+                name, 
+                email,
+                role: 'superadmin',
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              }
+            ]);
+            
+          if (profileError) {
+            console.error('Error creating superadmin profile:', profileError);
+            toast({
+              title: 'Superadmin profile creation failed',
+              description: profileError.message,
+              variant: 'destructive',
+            });
+            return false;
+          }
+        } catch (profileError) {
+          console.error('Error creating superadmin profile:', profileError);
+          toast({
+            title: 'Superadmin profile creation failed',
+            description: 'An error occurred during profile creation.',
+            variant: 'destructive',
+          });
+          return false;
+        }
+        
         toast({
           title: 'Superadmin created',
-          description: 'Superadmin account has been created successfully.',
+          description: 'Superadmin account has been created successfully. You can now log in.',
+          duration: 5000,
         });
         return true;
       }
