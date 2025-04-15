@@ -1,5 +1,6 @@
 
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import PageLayout from '@/components/PageLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -7,26 +8,42 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Search, Plus, Edit, Download, Upload } from 'lucide-react';
+import { Search, Plus, Edit, Download, Upload, Loader2 } from 'lucide-react';
+import { fetchProducts } from '@/services/productService';
+import { toast } from '@/components/ui/use-toast';
+import { Product } from '@/lib/supabase';
 
 const WarehousePage = () => {
   const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Mock data for warehouse items
-  const items = [
-    { id: 'P001', name: 'OLED Televizor 55"', category: 'Televizorlar', stock: 24, price: '4,500,000', status: 'in_stock' },
-    { id: 'P002', name: 'Muzlatgich Artel HD 345', category: 'Muzlatgichlar', stock: 15, price: '3,200,000', status: 'in_stock' },
-    { id: 'P003', name: 'Kir yuvish mashinasi LG', category: 'Kir yuvish', stock: 8, price: '2,800,000', status: 'in_stock' },
-    { id: 'P004', name: 'Konditsioner Samsung', category: 'Konditsionerlar', stock: 0, price: '3,700,000', status: 'out_of_stock' },
-    { id: 'P005', name: 'Gaz plita Artel', category: 'Oshxona jihozlari', stock: 3, price: '1,900,000', status: 'low_stock' },
-  ];
+  // Fetch products using react-query
+  const { data: products, isLoading, isError } = useQuery({
+    queryKey: ['products'],
+    queryFn: fetchProducts,
+    meta: {
+      onError: (error: Error) => {
+        toast({
+          title: 'Error fetching products',
+          description: error.message,
+          variant: 'destructive',
+        });
+      }
+    }
+  });
   
-  const filteredItems = items.filter(item => 
-    item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.id.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter products based on search query
+  const filteredProducts = products?.filter(product => 
+    product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (product.category || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    String(product.id).toLowerCase().includes(searchQuery.toLowerCase())
+  ) || [];
+  
+  const getStockStatus = (product: Product) => {
+    if (product.stock <= 0) return 'out_of_stock';
+    if (product.stock <= 5) return 'low_stock';
+    return 'in_stock';
+  };
   
   return (
     <PageLayout 
@@ -61,51 +78,75 @@ const WarehousePage = () => {
       
       <Card>
         <CardContent className="pt-6">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Nomi</TableHead>
-                <TableHead>Kategoriya</TableHead>
-                <TableHead>Miqdori</TableHead>
-                <TableHead>Narxi</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Amallar</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredItems.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell>{item.id}</TableCell>
-                  <TableCell className="font-medium">{item.name}</TableCell>
-                  <TableCell>{item.category}</TableCell>
-                  <TableCell>{item.stock}</TableCell>
-                  <TableCell>{item.price} so'm</TableCell>
-                  <TableCell>
-                    <Badge 
-                      variant={
-                        item.status === 'in_stock' ? 'success' : 
-                        item.status === 'out_of_stock' ? 'destructive' : 'warning'
-                      }
-                    >
-                      {item.status === 'in_stock' ? 'Mavjud' : 
-                       item.status === 'out_of_stock' ? 'Mavjud emas' : 'Kam qoldi'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button variant="ghost" size="icon">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon">
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+          {isLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : isError ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <h3 className="text-lg font-medium">Ma'lumotlarni yuklashda xatolik yuz berdi</h3>
+                <p className="mt-2 text-muted-foreground">Iltimos, keyinroq qayta urinib ko'ring</p>
+              </div>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>ID</TableHead>
+                  <TableHead>Nomi</TableHead>
+                  <TableHead>Kategoriya</TableHead>
+                  <TableHead>Miqdori</TableHead>
+                  <TableHead>Narxi</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Amallar</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredProducts.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center">
+                      <p className="py-6 text-muted-foreground">Hech qanday mahsulot topilmadi</p>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredProducts.map((product) => {
+                    const stockStatus = getStockStatus(product);
+                    return (
+                      <TableRow key={product.id}>
+                        <TableCell>{product.id}</TableCell>
+                        <TableCell className="font-medium">{product.name}</TableCell>
+                        <TableCell>{product.category || 'Kategoriyasiz'}</TableCell>
+                        <TableCell>{product.stock}</TableCell>
+                        <TableCell>{product.price.toLocaleString()} so'm</TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={
+                              stockStatus === 'in_stock' ? 'success' : 
+                              stockStatus === 'out_of_stock' ? 'destructive' : 'warning'
+                            }
+                          >
+                            {stockStatus === 'in_stock' ? 'Mavjud' : 
+                            stockStatus === 'out_of_stock' ? 'Mavjud emas' : 'Kam qoldi'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button variant="ghost" size="icon">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon">
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </PageLayout>
