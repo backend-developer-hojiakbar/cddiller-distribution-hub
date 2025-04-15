@@ -1,5 +1,5 @@
 
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase';
 import { User, Dealer } from '@/lib/supabase';
 
 // Fetch all dealers
