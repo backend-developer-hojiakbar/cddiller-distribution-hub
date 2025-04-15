@@ -5,7 +5,7 @@ import { User, Dealer } from '@/lib/supabase';
 // Fetch all dealers
 export async function fetchDealers(): Promise<Dealer[]> {
   try {
-    // First, fetch the dealers' basic data
+    // Fetch dealers from the dealers table
     const { data: dealersData, error: dealersError } = await supabase
       .from('dealers')
       .select('*')
@@ -16,7 +16,7 @@ export async function fetchDealers(): Promise<Dealer[]> {
       throw dealersError;
     }
 
-    // Then fetch the profiles to get names and emails
+    // Fetch profiles to get names and emails
     const dealerIds = dealersData.map(dealer => dealer.id);
     const { data: profilesData, error: profilesError } = await supabase
       .from('profiles')

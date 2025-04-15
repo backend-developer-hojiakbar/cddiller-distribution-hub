@@ -61,6 +61,8 @@ export type Order = {
   items_count: number;
   created_at: string;
   updated_at: string;
+  store_name?: string;
+  customer_name?: string;
 };
 
 export type OrderItem = {
@@ -70,6 +72,7 @@ export type OrderItem = {
   quantity: number;
   price: number;
   created_at: string;
+  product_name?: string;
 };
 
 export type Return = {
@@ -81,6 +84,8 @@ export type Return = {
   status: 'pending' | 'approved' | 'rejected';
   created_at: string;
   updated_at: string;
+  customer_name?: string;
+  order_reference?: string;
 };
 
 export type Invoice = {
@@ -92,4 +97,6 @@ export type Invoice = {
   status: 'pending' | 'paid' | 'overdue';
   created_at: string;
   updated_at: string;
+  customer_name?: string;
+  order_reference?: string;
 };
