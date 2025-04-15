@@ -4,75 +4,85 @@ import { User, Dealer } from '@/lib/supabase';
 
 // Fetch all dealers
 export async function fetchDealers(): Promise<Dealer[]> {
-  // First, fetch the dealers' basic data
-  const { data: dealersData, error: dealersError } = await supabase
-    .from('dealers')
-    .select('*')
-    .order('created_at', { ascending: false });
+  try {
+    // First, fetch the dealers' basic data
+    const { data: dealersData, error: dealersError } = await supabase
+      .from('dealers')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-  if (dealersError) {
-    console.error('Error fetching dealers:', dealersError);
-    throw dealersError;
+    if (dealersError) {
+      console.error('Error fetching dealers:', dealersError);
+      throw dealersError;
+    }
+
+    // Then fetch the profiles to get names and emails
+    const dealerIds = dealersData.map(dealer => dealer.id);
+    const { data: profilesData, error: profilesError } = await supabase
+      .from('profiles')
+      .select('*')
+      .in('id', dealerIds);
+
+    if (profilesError) {
+      console.error('Error fetching dealer profiles:', profilesError);
+      throw profilesError;
+    }
+
+    // Combine the data
+    return dealersData.map(dealer => {
+      const profile = profilesData.find(p => p.id === dealer.id);
+      return {
+        ...dealer,
+        name: profile?.name || 'Unnamed Dealer',
+        email: profile?.email || '',
+      } as Dealer;
+    });
+  } catch (error) {
+    console.error('Error in fetchDealers:', error);
+    throw error;
   }
-
-  // Then fetch the profiles to get names and emails
-  const dealerIds = dealersData.map(dealer => dealer.id);
-  const { data: profilesData, error: profilesError } = await supabase
-    .from('profiles')
-    .select('*')
-    .in('id', dealerIds);
-
-  if (profilesError) {
-    console.error('Error fetching dealer profiles:', profilesError);
-    throw profilesError;
-  }
-
-  // Combine the data
-  return dealersData.map(dealer => {
-    const profile = profilesData.find(p => p.id === dealer.id);
-    return {
-      ...dealer,
-      name: profile?.name || 'Unnamed Dealer',
-      email: profile?.email || '',
-    } as Dealer;
-  });
 }
 
 // Fetch a single dealer by ID
 export async function fetchDealerById(id: string): Promise<Dealer | null> {
-  // Fetch dealer data
-  const { data: dealer, error: dealerError } = await supabase
-    .from('dealers')
-    .select('*')
-    .eq('id', id)
-    .single();
+  try {
+    // Fetch dealer data
+    const { data: dealer, error: dealerError } = await supabase
+      .from('dealers')
+      .select('*')
+      .eq('id', id)
+      .single();
 
-  if (dealerError) {
-    console.error(`Error fetching dealer with id ${id}:`, dealerError);
-    throw dealerError;
+    if (dealerError) {
+      console.error(`Error fetching dealer with id ${id}:`, dealerError);
+      throw dealerError;
+    }
+
+    // Fetch profile data
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (profileError) {
+      console.error(`Error fetching dealer profile with id ${id}:`, profileError);
+      throw profileError;
+    }
+
+    if (dealer && profile) {
+      return {
+        ...dealer,
+        name: profile.name || 'Unnamed Dealer',
+        email: profile.email || '',
+      } as Dealer;
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error in fetchDealerById:', error);
+    throw error;
   }
-
-  // Fetch profile data
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', id)
-    .single();
-
-  if (profileError) {
-    console.error(`Error fetching dealer profile with id ${id}:`, profileError);
-    throw profileError;
-  }
-
-  if (dealer && profile) {
-    return {
-      ...dealer,
-      name: profile.name || 'Unnamed Dealer',
-      email: profile.email || '',
-    } as Dealer;
-  }
-
-  return null;
 }
 
 // Create a new dealer
@@ -106,10 +116,10 @@ export async function createDealer(
       throw new Error('Failed to create dealer account');
     }
 
-    // 2. Ensure profile entry exists
+    // 2. Ensure profile entry exists (might be created by trigger)
     const { error: profileError } = await supabase
       .from('profiles')
-      .insert([
+      .upsert([
         { 
           id: data.user.id,
           name, 
@@ -154,53 +164,76 @@ export async function createDealer(
 
 // Update a dealer
 export async function updateDealer(id: string, updates: Partial<Dealer>): Promise<Dealer> {
-  // Updates for the dealer table
-  const dealerUpdates: any = {};
-  if (updates.region) dealerUpdates.region = updates.region;
-  if (updates.phone) dealerUpdates.phone = updates.phone;
-  if (updates.status) dealerUpdates.status = updates.status;
+  try {
+    // Updates for the dealer table
+    const dealerUpdates: any = {};
+    if (updates.region) dealerUpdates.region = updates.region;
+    if (updates.phone) dealerUpdates.phone = updates.phone;
+    if (updates.status) dealerUpdates.status = updates.status;
 
-  // Updates for the profile
-  const profileUpdates: any = {};
-  if (updates.name) profileUpdates.name = updates.name;
-  
-  // Start a transaction
-  const { error: dealerError } = await supabase
-    .from('dealers')
-    .update(dealerUpdates)
-    .eq('id', id);
-
-  if (dealerError) {
-    console.error(`Error updating dealer with id ${id}:`, dealerError);
-    throw dealerError;
-  }
-  
-  // Update profile if needed
-  if (Object.keys(profileUpdates).length > 0) {
-    profileUpdates.updated_at = new Date().toISOString();
+    // Updates for the profile
+    const profileUpdates: any = {};
+    if (updates.name) profileUpdates.name = updates.name;
     
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .update(profileUpdates)
-      .eq('id', id);
-      
-    if (profileError) {
-      console.error(`Error updating dealer profile with id ${id}:`, profileError);
-      throw profileError;
-    }
-  }
+    // Start transaction
+    if (Object.keys(dealerUpdates).length > 0) {
+      const { error: dealerError } = await supabase
+        .from('dealers')
+        .update(dealerUpdates)
+        .eq('id', id);
 
-  // Fetch the updated dealer
-  return await fetchDealerById(id) as Dealer;
+      if (dealerError) {
+        console.error(`Error updating dealer with id ${id}:`, dealerError);
+        throw dealerError;
+      }
+    }
+    
+    // Update profile if needed
+    if (Object.keys(profileUpdates).length > 0) {
+      profileUpdates.updated_at = new Date().toISOString();
+      
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update(profileUpdates)
+        .eq('id', id);
+        
+      if (profileError) {
+        console.error(`Error updating dealer profile with id ${id}:`, profileError);
+        throw profileError;
+      }
+    }
+
+    // Fetch the updated dealer
+    return await fetchDealerById(id) as Dealer;
+  } catch (error) {
+    console.error('Error in updateDealer:', error);
+    throw error;
+  }
 }
 
 // Delete a dealer
 export async function deleteDealer(id: string): Promise<void> {
-  // This will cascade to the dealer record due to foreign key
-  const { error } = await supabase.auth.admin.deleteUser(id);
+  try {
+    // Delete the dealer record first
+    const { error: dealerError } = await supabase
+      .from('dealers')
+      .delete()
+      .eq('id', id);
 
-  if (error) {
-    console.error(`Error deleting dealer with id ${id}:`, error);
+    if (dealerError) {
+      console.error(`Error deleting dealer with id ${id}:`, dealerError);
+      throw dealerError;
+    }
+
+    // Then delete the auth user (this will cascade to profiles)
+    const { error } = await supabase.auth.admin.deleteUser(id);
+
+    if (error) {
+      console.error(`Error deleting dealer auth with id ${id}:`, error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error in deleteDealer:', error);
     throw error;
   }
 }
@@ -208,12 +241,14 @@ export async function deleteDealer(id: string): Promise<void> {
 // Update dealer status
 export async function updateDealerStatus(id: string, status: 'active' | 'inactive' | 'pending'): Promise<boolean> {
   try {
+    // Update dealer status
     const { error } = await supabase
       .from('dealers')
       .update({ status })
       .eq('id', id);
 
     if (error) {
+      console.error(`Error updating dealer status:`, error);
       throw error;
     }
     
@@ -230,7 +265,7 @@ export async function updateDealerStatus(id: string, status: 'active' | 'inactiv
     
     return true;
   } catch (error) {
-    console.error(`Error updating dealer status:`, error);
+    console.error(`Error in updateDealerStatus:`, error);
     return false;
   }
 }

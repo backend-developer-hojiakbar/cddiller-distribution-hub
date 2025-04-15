@@ -1,18 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-
-export type Product = {
-  id: number;
-  name: string;
-  description: string | null;
-  price: number;
-  stock: number;
-  category: string | null;
-  image_url: string | null;
-  status: 'active' | 'inactive';
-  created_at: string;
-  updated_at: string;
-};
+import { Product } from '@/lib/supabase';
 
 // Fetch all products
 export async function fetchProducts(): Promise<Product[]> {
