@@ -1,12 +1,7 @@
 
-import { createClient } from '@supabase/supabase-js';
-
-// Use the provided Supabase credentials
-const supabaseUrl = 'https://flpimjforqtcqzwmrmcp.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZscGltamZvcnF0Y3F6d21ybWNwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ0MzA2ODAsImV4cCI6MjA2MDAwNjY4MH0.E_1NGhn1N_8JLD7oM2UGoNviyQuAyMiVc6eO5V7yKEQ';
-
-// Create a Supabase client with the provided credentials
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// This file is maintained for backward compatibility but just re-exports the main client
+import { supabase } from '@/integrations/supabase/client';
+export { supabase };
 
 // Database types - representing our tables
 export type User = {
@@ -16,6 +11,10 @@ export type User = {
   role: 'superadmin' | 'admin' | 'warehouse' | 'dealer' | 'agent' | 'store';
   avatar_url?: string;
   created_at: string;
+  updated_at: string;
+  status?: 'active' | 'inactive' | 'pending';
+  phone?: string;
+  address?: string;
 };
 
 export type Store = {
@@ -37,4 +36,59 @@ export type Dealer = {
   status: 'active' | 'inactive' | 'pending';
   stores_count: number;
   created_at: string;
+};
+
+export type Product = {
+  id: number;
+  name: string;
+  description: string | null;
+  price: number;
+  stock: number;
+  category: string | null;
+  image_url: string | null;
+  status: 'active' | 'inactive';
+  created_at: string;
+  updated_at: string;
+};
+
+export type Order = {
+  id: number;
+  customer_id: string;
+  store_id: number;
+  total: number;
+  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  items_count: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type OrderItem = {
+  id: number;
+  order_id: number;
+  product_id: number;
+  quantity: number;
+  price: number;
+  created_at: string;
+};
+
+export type Return = {
+  id: number;
+  order_id: number;
+  customer_id: string;
+  reason: string;
+  items_count: number;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
+  updated_at: string;
+};
+
+export type Invoice = {
+  id: number;
+  order_id: number;
+  customer_id: string;
+  total: number;
+  due_date: string;
+  status: 'pending' | 'paid' | 'overdue';
+  created_at: string;
+  updated_at: string;
 };

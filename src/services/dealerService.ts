@@ -1,11 +1,20 @@
 
-import { supabase, Dealer } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
+import { User, Dealer } from '@/lib/supabase';
 
 // Fetch all dealers
 export async function fetchDealers(): Promise<Dealer[]> {
   const { data, error } = await supabase
     .from('dealers')
-    .select('*')
+    .select(`
+      id,
+      region,
+      phone,
+      status,
+      stores_count,
+      created_at,
+      profiles:id(name, email)
+    `)
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -13,14 +22,30 @@ export async function fetchDealers(): Promise<Dealer[]> {
     throw error;
   }
 
-  return data || [];
+  // Transform the data to include name from profiles
+  return (data || []).map(item => {
+    const { profiles, ...dealer } = item;
+    return {
+      ...dealer,
+      name: profiles?.name || 'Unnamed Dealer',
+      email: profiles?.email || '',
+    } as unknown as Dealer;
+  });
 }
 
 // Fetch a single dealer by ID
 export async function fetchDealerById(id: string): Promise<Dealer | null> {
   const { data, error } = await supabase
     .from('dealers')
-    .select('*')
+    .select(`
+      id,
+      region,
+      phone,
+      status,
+      stores_count,
+      created_at,
+      profiles:id(name, email)
+    `)
     .eq('id', id)
     .single();
 
@@ -29,51 +54,175 @@ export async function fetchDealerById(id: string): Promise<Dealer | null> {
     throw error;
   }
 
-  return data;
+  if (data) {
+    const { profiles, ...dealer } = data;
+    return {
+      ...dealer,
+      name: profiles?.name || 'Unnamed Dealer',
+      email: profiles?.email || '',
+    } as unknown as Dealer;
+  }
+
+  return null;
 }
 
 // Create a new dealer
-export async function createDealer(dealer: Omit<Dealer, 'id' | 'created_at'>): Promise<Dealer> {
-  const { data, error } = await supabase
-    .from('dealers')
-    .insert([dealer])
-    .select()
-    .single();
+export async function createDealer(
+  email: string, 
+  password: string, 
+  name: string, 
+  region: string, 
+  phone: string
+): Promise<boolean> {
+  try {
+    // 1. Create auth user with dealer role
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          name,
+          role: 'dealer',
+        },
+        emailRedirectTo: window.location.origin,
+      }
+    });
 
-  if (error) {
+    if (error) {
+      console.error('Error creating dealer auth:', error);
+      throw error;
+    }
+
+    if (!data.user) {
+      throw new Error('Failed to create dealer account');
+    }
+
+    // 2. Ensure profile entry exists
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .insert([
+        { 
+          id: data.user.id,
+          name, 
+          email,
+          role: 'dealer',
+          status: 'active',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      ]);
+
+    if (profileError) {
+      console.error('Error creating dealer profile:', profileError);
+      // Continue anyway as the profile might have been created by the trigger
+    }
+
+    // 3. Create the dealer entry
+    const { error: dealerError } = await supabase
+      .from('dealers')
+      .insert([
+        {
+          id: data.user.id,
+          region,
+          phone,
+          status: 'pending',
+          stores_count: 0,
+          created_at: new Date().toISOString()
+        }
+      ]);
+
+    if (dealerError) {
+      console.error('Error creating dealer record:', dealerError);
+      throw dealerError;
+    }
+
+    return true;
+  } catch (error) {
     console.error('Error creating dealer:', error);
     throw error;
   }
-
-  return data;
 }
 
 // Update a dealer
 export async function updateDealer(id: string, updates: Partial<Dealer>): Promise<Dealer> {
-  const { data, error } = await supabase
-    .from('dealers')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single();
+  // Updates for the dealer table
+  const dealerUpdates: any = {};
+  if (updates.region) dealerUpdates.region = updates.region;
+  if (updates.phone) dealerUpdates.phone = updates.phone;
+  if (updates.status) dealerUpdates.status = updates.status;
 
-  if (error) {
-    console.error(`Error updating dealer with id ${id}:`, error);
-    throw error;
+  // Updates for the profile
+  const profileUpdates: any = {};
+  if (updates.name) profileUpdates.name = updates.name;
+  if (updates.email) profileUpdates.email = updates.email;
+  
+  // Start a transaction
+  const { error: dealerError } = await supabase
+    .from('dealers')
+    .update(dealerUpdates)
+    .eq('id', id);
+
+  if (dealerError) {
+    console.error(`Error updating dealer with id ${id}:`, dealerError);
+    throw dealerError;
+  }
+  
+  // Update profile if needed
+  if (Object.keys(profileUpdates).length > 0) {
+    profileUpdates.updated_at = new Date().toISOString();
+    
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update(profileUpdates)
+      .eq('id', id);
+      
+    if (profileError) {
+      console.error(`Error updating dealer profile with id ${id}:`, profileError);
+      throw profileError;
+    }
   }
 
-  return data;
+  // Fetch the updated dealer
+  return await fetchDealerById(id) as Dealer;
 }
 
 // Delete a dealer
 export async function deleteDealer(id: string): Promise<void> {
-  const { error } = await supabase
-    .from('dealers')
-    .delete()
-    .eq('id', id);
+  // This will cascade to the dealer record due to foreign key
+  const { error } = await supabase.auth.admin.deleteUser(id);
 
   if (error) {
     console.error(`Error deleting dealer with id ${id}:`, error);
     throw error;
+  }
+}
+
+// Update dealer status
+export async function updateDealerStatus(id: string, status: 'active' | 'inactive' | 'pending'): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('dealers')
+      .update({ status })
+      .eq('id', id);
+
+    if (error) {
+      throw error;
+    }
+    
+    // Also update the status in profiles
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({ status })
+      .eq('id', id);
+      
+    if (profileError) {
+      console.error(`Error updating dealer profile status:`, profileError);
+      // Continue anyway as the dealer status is updated
+    }
+    
+    return true;
+  } catch (error) {
+    console.error(`Error updating dealer status:`, error);
+    return false;
   }
 }

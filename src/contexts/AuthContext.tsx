@@ -16,6 +16,7 @@ export type UserProfile = {
   avatar_url?: string;
   phone?: string;
   address?: string;
+  status?: 'active' | 'inactive' | 'pending';
   created_at: string;
   updated_at: string;
 };
@@ -67,6 +68,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (data) {
         console.log('User profile data:', data);
+        // Check if user is inactive - if so, don't log them in
+        if (data.status === 'inactive') {
+          toast({
+            title: 'Account inactive',
+            description: 'Your account has been deactivated. Please contact an administrator.',
+            variant: 'destructive',
+          });
+          await supabase.auth.signOut();
+          setUser(null);
+          setSession(null);
+          setIsLoading(false);
+          return;
+        }
+        
         setUser(data as UserProfile);
       }
       
@@ -142,6 +157,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       console.log('Login successful:', data);
       if (data.user) {
+        // Fetch the user profile to check status
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', data.user.id)
+          .single();
+          
+        if (profileError) {
+          console.error('Error fetching profile after login:', profileError);
+          toast({
+            title: 'Login failed',
+            description: 'Error fetching user profile',
+            variant: 'destructive',
+          });
+          return false;
+        }
+        
+        // Check if user is inactive
+        if (profileData.status === 'inactive') {
+          toast({
+            title: 'Account inactive',
+            description: 'Your account has been deactivated. Please contact an administrator.',
+            variant: 'destructive',
+          });
+          await supabase.auth.signOut();
+          return false;
+        }
+        
         toast({
           title: 'Login successful',
           description: `Welcome back!`,
@@ -175,6 +218,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             name,
             role,
           },
+          emailRedirectTo: window.location.origin,
         }
       });
       
@@ -200,6 +244,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 name, 
                 email,
                 role,
+                status: 'pending',
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
               }
@@ -214,7 +259,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         toast({
           title: 'Signup successful',
-          description: 'Your account has been created successfully.',
+          description: 'Your account has been created successfully. An administrator will review your account.',
         });
         return true;
       }
@@ -290,6 +335,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 name, 
                 email,
                 role: 'superadmin',
+                status: 'active',
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
               }
