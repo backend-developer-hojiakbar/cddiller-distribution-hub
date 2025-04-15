@@ -203,9 +203,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
               }
-            ])
-            .select()
-            .single();
+            ]);
             
           if (profileError) {
             console.error('Error creating profile:', profileError);
@@ -239,6 +237,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     try {
       console.log('Creating superadmin account:', email);
+      
+      // First check if the user already exists
+      const { data: existingUsers, error: checkError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('email', email)
+        .eq('role', 'superadmin');
+        
+      if (checkError) {
+        console.error('Error checking for existing superadmin:', checkError);
+      } else if (existingUsers && existingUsers.length > 0) {
+        toast({
+          title: 'Superadmin already exists',
+          description: 'A superadmin with this email already exists. Please log in instead.',
+        });
+        return false;
+      }
+      
       // Step 1: Create the user through Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -248,6 +264,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             name,
             role: 'superadmin',
           },
+          emailRedirectTo: window.location.origin,
         }
       });
       
