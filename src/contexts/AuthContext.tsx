@@ -10,13 +10,13 @@ export type UserRole = 'superadmin' | 'admin' | 'warehouse' | 'dealer' | 'agent'
 // User profile type
 export type UserProfile = {
   id: string;
-  name: string;
-  email: string;
+  name: string | null;
+  email: string | null;
   role: UserRole;
-  avatar_url?: string;
-  phone?: string;
-  address?: string;
-  status?: 'active' | 'inactive' | 'pending';
+  avatar_url?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  status: 'active' | 'inactive' | 'pending';
   created_at: string;
   updated_at: string;
 };

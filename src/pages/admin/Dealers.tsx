@@ -1,5 +1,6 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import PageLayout from '@/components/PageLayout';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,27 +10,84 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Search, Plus, Edit, Trash, Eye, Loader2 } from 'lucide-react';
-import { fetchDealers } from '@/services/dealerService';
+import { fetchDealers, updateDealerStatus, deleteDealer } from '@/services/dealerService';
 import { toast } from '@/components/ui/use-toast';
+import { Dealer } from '@/lib/supabase';
 
 const DealersPage = () => {
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
+  const [dealers, setDealers] = useState<Dealer[]>([]);
   
-  // Fetch dealers using react-query - updated to use onSettled instead of onError
-  const { data: dealers, isLoading, isError } = useQuery({
+  // Fetch dealers using react-query
+  const { data, isLoading, isError } = useQuery({
     queryKey: ['dealers'],
     queryFn: fetchDealers,
     meta: {
-      onError: (error: Error) => {
+      onSettled: (data: Dealer[] | undefined, error: Error | null) => {
+        if (error) {
+          toast({
+            title: 'Error fetching dealers',
+            description: error.message,
+            variant: 'destructive',
+          });
+        } else if (data) {
+          setDealers(data);
+        }
+      }
+    }
+  });
+  
+  // Handle dealer status change
+  const handleStatusChange = async (id: string, status: 'active' | 'inactive' | 'pending') => {
+    try {
+      const success = await updateDealerStatus(id, status);
+      if (success) {
         toast({
-          title: 'Error fetching dealers',
-          description: error.message,
+          title: 'Status updated',
+          description: `Dealer status has been updated to ${status}`,
+        });
+        
+        // Update local state
+        setDealers(prev => 
+          prev.map(dealer => 
+            dealer.id === id ? { ...dealer, status } : dealer
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Error updating dealer status:', error);
+      toast({
+        title: 'Error updating status',
+        description: 'An error occurred. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+  
+  // Handle dealer deletion
+  const handleDeleteDealer = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this dealer?')) {
+      try {
+        await deleteDealer(id);
+        toast({
+          title: 'Dealer deleted',
+          description: 'The dealer has been deleted successfully',
+        });
+        
+        // Update local state
+        setDealers(prev => prev.filter(dealer => dealer.id !== id));
+      } catch (error) {
+        console.error('Error deleting dealer:', error);
+        toast({
+          title: 'Error deleting dealer',
+          description: 'An error occurred. Please try again.',
           variant: 'destructive',
         });
       }
     }
-  });
+  };
   
   // If there's an error or the data is still loading, show that accordingly
   if (isError) {
@@ -70,7 +128,7 @@ const DealersPage = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <Button>
+        <Button onClick={() => navigate('/admin/add-dealer')}>
           <Plus className="mr-2 h-4 w-4" />
           Yangi diller
         </Button>
@@ -123,13 +181,17 @@ const DealersPage = () => {
                       <TableCell>{dealer.stores_count}</TableCell>
                       <TableCell>
                         <div className="flex gap-2">
-                          <Button variant="ghost" size="icon">
+                          <Button variant="ghost" size="icon" onClick={() => navigate(`/admin/dealers/${dealer.id}`)}>
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon">
+                          <Button variant="ghost" size="icon" onClick={() => navigate(`/admin/dealers/edit/${dealer.id}`)}>
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => handleDeleteDealer(dealer.id)}
+                          >
                             <Trash className="h-4 w-4" />
                           </Button>
                         </div>

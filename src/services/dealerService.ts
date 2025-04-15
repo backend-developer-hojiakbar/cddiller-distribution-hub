@@ -4,63 +4,72 @@ import { User, Dealer } from '@/lib/supabase';
 
 // Fetch all dealers
 export async function fetchDealers(): Promise<Dealer[]> {
-  const { data, error } = await supabase
+  // First, fetch the dealers' basic data
+  const { data: dealersData, error: dealersError } = await supabase
     .from('dealers')
-    .select(`
-      id,
-      region,
-      phone,
-      status,
-      stores_count,
-      created_at,
-      profiles:id(name, email)
-    `)
+    .select('*')
     .order('created_at', { ascending: false });
 
-  if (error) {
-    console.error('Error fetching dealers:', error);
-    throw error;
+  if (dealersError) {
+    console.error('Error fetching dealers:', dealersError);
+    throw dealersError;
   }
 
-  // Transform the data to include name from profiles
-  return (data || []).map(item => {
-    const { profiles, ...dealer } = item;
+  // Then fetch the profiles to get names and emails
+  const dealerIds = dealersData.map(dealer => dealer.id);
+  const { data: profilesData, error: profilesError } = await supabase
+    .from('profiles')
+    .select('*')
+    .in('id', dealerIds);
+
+  if (profilesError) {
+    console.error('Error fetching dealer profiles:', profilesError);
+    throw profilesError;
+  }
+
+  // Combine the data
+  return dealersData.map(dealer => {
+    const profile = profilesData.find(p => p.id === dealer.id);
     return {
       ...dealer,
-      name: profiles?.name || 'Unnamed Dealer',
-      email: profiles?.email || '',
-    } as unknown as Dealer;
+      name: profile?.name || 'Unnamed Dealer',
+      email: profile?.email || '',
+    } as Dealer;
   });
 }
 
 // Fetch a single dealer by ID
 export async function fetchDealerById(id: string): Promise<Dealer | null> {
-  const { data, error } = await supabase
+  // Fetch dealer data
+  const { data: dealer, error: dealerError } = await supabase
     .from('dealers')
-    .select(`
-      id,
-      region,
-      phone,
-      status,
-      stores_count,
-      created_at,
-      profiles:id(name, email)
-    `)
+    .select('*')
     .eq('id', id)
     .single();
 
-  if (error) {
-    console.error(`Error fetching dealer with id ${id}:`, error);
-    throw error;
+  if (dealerError) {
+    console.error(`Error fetching dealer with id ${id}:`, dealerError);
+    throw dealerError;
   }
 
-  if (data) {
-    const { profiles, ...dealer } = data;
+  // Fetch profile data
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (profileError) {
+    console.error(`Error fetching dealer profile with id ${id}:`, profileError);
+    throw profileError;
+  }
+
+  if (dealer && profile) {
     return {
       ...dealer,
-      name: profiles?.name || 'Unnamed Dealer',
-      email: profiles?.email || '',
-    } as unknown as Dealer;
+      name: profile.name || 'Unnamed Dealer',
+      email: profile.email || '',
+    } as Dealer;
   }
 
   return null;
@@ -154,7 +163,6 @@ export async function updateDealer(id: string, updates: Partial<Dealer>): Promis
   // Updates for the profile
   const profileUpdates: any = {};
   if (updates.name) profileUpdates.name = updates.name;
-  if (updates.email) profileUpdates.email = updates.email;
   
   // Start a transaction
   const { error: dealerError } = await supabase

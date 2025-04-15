@@ -6,15 +6,15 @@ export { supabase };
 // Database types - representing our tables
 export type User = {
   id: string;
-  name: string;
-  email: string;
+  name: string | null;
+  email: string | null;
   role: 'superadmin' | 'admin' | 'warehouse' | 'dealer' | 'agent' | 'store';
-  avatar_url?: string;
+  avatar_url?: string | null;
   created_at: string;
   updated_at: string;
-  status?: 'active' | 'inactive' | 'pending';
-  phone?: string;
-  address?: string;
+  status: 'active' | 'inactive' | 'pending';
+  phone?: string | null;
+  address?: string | null;
 };
 
 export type Store = {
@@ -31,6 +31,7 @@ export type Store = {
 export type Dealer = {
   id: string;
   name: string;
+  email?: string | null;
   region: string;
   phone: string;
   status: 'active' | 'inactive' | 'pending';

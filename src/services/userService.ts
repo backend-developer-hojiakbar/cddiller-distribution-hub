@@ -1,9 +1,10 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { UserProfile, UserRole } from '@/contexts/AuthContext';
+import { User } from '@/lib/supabase';
 
 // Fetch all users
-export async function fetchUsers(): Promise<UserProfile[]> {
+export async function fetchUsers(): Promise<User[]> {
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
@@ -18,7 +19,7 @@ export async function fetchUsers(): Promise<UserProfile[]> {
 }
 
 // Fetch a single user by ID
-export async function fetchUserById(id: string): Promise<UserProfile | null> {
+export async function fetchUserById(id: string): Promise<User | null> {
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
@@ -34,7 +35,7 @@ export async function fetchUserById(id: string): Promise<UserProfile | null> {
 }
 
 // Create a new user (used by admins to create users)
-export async function createUser(user: Partial<UserProfile>): Promise<UserProfile> {
+export async function createUser(user: Partial<User>): Promise<User> {
   const { data, error } = await supabase
     .from('profiles')
     .insert([user])
@@ -50,7 +51,7 @@ export async function createUser(user: Partial<UserProfile>): Promise<UserProfil
 }
 
 // Update a user
-export async function updateUser(id: string, updates: Partial<UserProfile>): Promise<UserProfile> {
+export async function updateUser(id: string, updates: Partial<User>): Promise<User> {
   const { data, error } = await supabase
     .from('profiles')
     .update(updates)
@@ -136,7 +137,7 @@ export async function updateUserStatus(id: string, status: 'active' | 'inactive'
 }
 
 // Fetch users by role
-export async function fetchUsersByRole(role: UserRole): Promise<UserProfile[]> {
+export async function fetchUsersByRole(role: UserRole): Promise<User[]> {
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
