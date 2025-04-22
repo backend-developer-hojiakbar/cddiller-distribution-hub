@@ -4,141 +4,122 @@ import { Store } from '@/lib/supabase';
 
 // Fetch all stores
 export async function fetchStores(): Promise<Store[]> {
-  const { data, error } = await supabase
-    .from('stores')
-    .select(`
-      id,
-      name,
-      address,
-      dealer_id,
-      status,
-      orders_count,
-      created_at,
-      profiles:dealer_id(name)
-    `)
-    .order('created_at', { ascending: false });
+  try {
+    const { data, error } = await supabase
+      .from('stores')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-  if (error) {
+    if (error) {
+      console.error('Error fetching stores:', error);
+      throw error;
+    }
+
+    return data || [];
+  } catch (error) {
     console.error('Error fetching stores:', error);
-    throw error;
+    return [];
   }
-
-  // Transform the data to match our Store type
-  return (data || []).map(item => {
-    const { profiles, ...store } = item;
-    return {
-      ...store,
-      dealer_name: profiles ? profiles.name : undefined
-    } as Store;
-  });
 }
 
 // Fetch stores by dealer ID
 export async function fetchStoresByDealer(dealerId: string): Promise<Store[]> {
-  const { data, error } = await supabase
-    .from('stores')
-    .select(`
-      id,
-      name,
-      address,
-      dealer_id,
-      status,
-      orders_count,
-      created_at,
-      profiles:dealer_id(name)
-    `)
-    .eq('dealer_id', dealerId)
-    .order('created_at', { ascending: false });
+  try {
+    const { data, error } = await supabase
+      .from('stores')
+      .select('*')
+      .eq('dealer_id', dealerId)
+      .order('created_at', { ascending: false });
 
-  if (error) {
+    if (error) {
+      console.error(`Error fetching stores for dealer ${dealerId}:`, error);
+      throw error;
+    }
+
+    return data || [];
+  } catch (error) {
     console.error(`Error fetching stores for dealer ${dealerId}:`, error);
-    throw error;
+    return [];
   }
-
-  // Transform the data to match our Store type
-  return (data || []).map(item => {
-    const { profiles, ...store } = item;
-    return {
-      ...store,
-      dealer_name: profiles ? profiles.name : undefined
-    } as Store;
-  });
 }
 
 // Fetch a single store by ID
 export async function fetchStoreById(id: number): Promise<Store | null> {
-  const { data, error } = await supabase
-    .from('stores')
-    .select(`
-      id,
-      name,
-      address,
-      dealer_id,
-      status,
-      orders_count,
-      created_at,
-      profiles:dealer_id(name)
-    `)
-    .eq('id', id)
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from('stores')
+      .select('*')
+      .eq('id', id)
+      .single();
 
-  if (error) {
+    if (error) {
+      console.error(`Error fetching store with id ${id}:`, error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
     console.error(`Error fetching store with id ${id}:`, error);
-    throw error;
+    return null;
   }
-
-  if (data) {
-    const { profiles, ...store } = data;
-    return {
-      ...store,
-      dealer_name: profiles ? profiles.name : undefined
-    } as Store;
-  }
-
-  return null;
 }
 
 // Create a new store
 export async function createStore(store: Omit<Store, 'id' | 'created_at' | 'dealer_name'>): Promise<Store> {
-  const { data, error } = await supabase
-    .from('stores')
-    .insert([store])
-    .select()
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from('stores')
+      .insert([store])
+      .select()
+      .single();
 
-  if (error) {
+    if (error) {
+      console.error('Error creating store:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
     console.error('Error creating store:', error);
     throw error;
   }
-
-  return data;
 }
 
 // Update a store
 export async function updateStore(id: number, updates: Partial<Store>): Promise<Store> {
-  const { data, error } = await supabase
-    .from('stores')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from('stores')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
 
-  if (error) {
+    if (error) {
+      console.error(`Error updating store with id ${id}:`, error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
     console.error(`Error updating store with id ${id}:`, error);
     throw error;
   }
-
-  return data;
 }
 
 // Delete a store
 export async function deleteStore(id: number): Promise<void> {
-  const { error } = await supabase
-    .from('stores')
-    .delete()
-    .eq('id', id);
+  try {
+    const { error } = await supabase
+      .from('stores')
+      .delete()
+      .eq('id', id);
 
-  if (error) {
+    if (error) {
+      console.error(`Error deleting store with id ${id}:`, error);
+      throw error;
+    }
+  } catch (error) {
     console.error(`Error deleting store with id ${id}:`, error);
     throw error;
   }
@@ -191,8 +172,7 @@ export async function createStoreUser(
         data: {
           name,
           role: 'store',
-        },
-        emailRedirectTo: window.location.origin,
+        }
       }
     });
 

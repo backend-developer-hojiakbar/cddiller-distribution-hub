@@ -5,66 +5,86 @@ import { User } from '@/lib/supabase';
 
 // Fetch all users
 export async function fetchUsers(): Promise<User[]> {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .order('created_at', { ascending: false });
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-  if (error) {
+    if (error) {
+      console.error('Error fetching users:', error);
+      throw error;
+    }
+
+    return data || [];
+  } catch (error) {
     console.error('Error fetching users:', error);
-    throw error;
+    return [];
   }
-
-  return data || [];
 }
 
 // Fetch a single user by ID
 export async function fetchUserById(id: string): Promise<User | null> {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', id)
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', id)
+      .single();
 
-  if (error) {
+    if (error) {
+      console.error(`Error fetching user with id ${id}:`, error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
     console.error(`Error fetching user with id ${id}:`, error);
-    throw error;
+    return null;
   }
-
-  return data;
 }
 
 // Create a new user (used by admins to create users)
 export async function createUser(user: Partial<User>): Promise<User> {
-  const { data, error } = await supabase
-    .from('profiles')
-    .insert([user])
-    .select()
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .insert([user])
+      .select()
+      .single();
 
-  if (error) {
+    if (error) {
+      console.error('Error creating user:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
     console.error('Error creating user:', error);
     throw error;
   }
-
-  return data;
 }
 
 // Update a user
 export async function updateUser(id: string, updates: Partial<User>): Promise<User> {
-  const { data, error } = await supabase
-    .from('profiles')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
 
-  if (error) {
+    if (error) {
+      console.error(`Error updating user with id ${id}:`, error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
     console.error(`Error updating user with id ${id}:`, error);
     throw error;
   }
-
-  return data;
 }
 
 // Register a new dealer (creates both auth user and dealer profile)
@@ -138,16 +158,21 @@ export async function updateUserStatus(id: string, status: 'active' | 'inactive'
 
 // Fetch users by role
 export async function fetchUsersByRole(role: UserRole): Promise<User[]> {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('role', role)
-    .order('created_at', { ascending: false });
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('role', role)
+      .order('created_at', { ascending: false });
 
-  if (error) {
+    if (error) {
+      console.error(`Error fetching ${role} users:`, error);
+      throw error;
+    }
+
+    return data || [];
+  } catch (error) {
     console.error(`Error fetching ${role} users:`, error);
-    throw error;
+    return [];
   }
-
-  return data || [];
 }
