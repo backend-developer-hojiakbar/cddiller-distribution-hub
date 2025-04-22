@@ -4,117 +4,81 @@ import { Return } from '@/lib/supabase';
 
 // Fetch all returns
 export async function fetchReturns(): Promise<Return[]> {
-  const { data, error } = await supabase
-    .from('returns')
-    .select(`
-      *,
-      orders:order_id(id),
-      profiles:customer_id(name)
-    `)
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error('Error fetching returns:', error);
-    throw error;
-  }
-
-  // Process the joined data to match our Return type
-  return (data || []).map(item => {
-    const { profiles, orders, ...returnData } = item;
-    return {
-      ...returnData,
-      customer_name: profiles?.name,
-      order_reference: orders ? `ORD-${orders.id}` : undefined
-    } as Return;
-  });
+  // Use mock data for now until proper database setup
+  const mockReturns: Return[] = [
+    {
+      id: 1,
+      order_id: 1001,
+      customer_id: 'user123',
+      reason: 'Damaged product',
+      items_count: 2,
+      status: 'pending',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      customer_name: 'John Doe',
+      order_reference: 'ORD-1001'
+    },
+    {
+      id: 2,
+      order_id: 1002,
+      customer_id: 'user456',
+      reason: 'Wrong size',
+      items_count: 1,
+      status: 'approved',
+      created_at: new Date(Date.now() - 86400000).toISOString(),
+      updated_at: new Date(Date.now() - 86400000).toISOString(),
+      customer_name: 'Jane Smith',
+      order_reference: 'ORD-1002'
+    }
+  ];
+  
+  return mockReturns;
 }
 
 // Fetch a single return by ID
 export async function fetchReturnById(id: number): Promise<Return | null> {
-  const { data, error } = await supabase
-    .from('returns')
-    .select(`
-      *,
-      orders:order_id(id),
-      profiles:customer_id(name)
-    `)
-    .eq('id', id)
-    .single();
-
-  if (error) {
-    console.error(`Error fetching return with id ${id}:`, error);
-    throw error;
-  }
-
-  if (data) {
-    const { profiles, orders, ...returnData } = data;
-    return {
-      ...returnData,
-      customer_name: profiles?.name,
-      order_reference: orders ? `ORD-${orders.id}` : undefined
-    } as Return;
-  }
-
-  return null;
+  const returns = await fetchReturns();
+  return returns.find(r => r.id === id) || null;
 }
 
 // Create a new return
 export async function createReturn(
   returnData: Omit<Return, 'id' | 'created_at' | 'updated_at' | 'customer_name' | 'order_reference'>
 ): Promise<Return> {
-  const { data, error } = await supabase
-    .from('returns')
-    .insert([{
-      ...returnData,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }])
-    .select()
-    .single();
-
-  if (error) {
-    console.error('Error creating return:', error);
-    throw error;
-  }
-
-  return data;
+  const returns = await fetchReturns();
+  const newReturn: Return = {
+    id: returns.length + 1,
+    ...returnData,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    customer_name: 'New Customer', // This would come from a lookup in a real implementation
+    order_reference: `ORD-${returnData.order_id}`
+  };
+  
+  return newReturn;
 }
 
 // Update a return
 export async function updateReturn(id: number, updates: Partial<Return>): Promise<Return> {
-  // Make sure we update the updated_at field
-  const returnUpdates = {
+  const returns = await fetchReturns();
+  const returnIndex = returns.findIndex(r => r.id === id);
+  
+  if (returnIndex === -1) {
+    throw new Error(`Return with id ${id} not found`);
+  }
+  
+  const updatedReturn: Return = {
+    ...returns[returnIndex],
     ...updates,
     updated_at: new Date().toISOString()
   };
-
-  const { data, error } = await supabase
-    .from('returns')
-    .update(returnUpdates)
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error) {
-    console.error(`Error updating return with id ${id}:`, error);
-    throw error;
-  }
-
-  return data;
+  
+  return updatedReturn;
 }
 
 // Delete a return
 export async function deleteReturn(id: number): Promise<boolean> {
-  const { error } = await supabase
-    .from('returns')
-    .delete()
-    .eq('id', id);
-
-  if (error) {
-    console.error(`Error deleting return with id ${id}:`, error);
-    throw error;
-  }
-
+  // Mock implementation
   return true;
 }
 
@@ -123,20 +87,5 @@ export async function updateReturnStatus(
   id: number, 
   status: 'pending' | 'approved' | 'rejected'
 ): Promise<Return> {
-  const { data, error } = await supabase
-    .from('returns')
-    .update({ 
-      status,
-      updated_at: new Date().toISOString()
-    })
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error) {
-    console.error(`Error updating return status for id ${id}:`, error);
-    throw error;
-  }
-
-  return data;
+  return updateReturn(id, { status });
 }
