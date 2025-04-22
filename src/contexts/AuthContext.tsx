@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -5,6 +6,9 @@ import { Session, User } from '@supabase/supabase-js';
 
 // Define user roles
 export type UserRole = 'superadmin' | 'admin' | 'warehouse' | 'dealer' | 'agent' | 'store';
+
+// Define user status types
+export type UserStatus = 'active' | 'inactive' | 'pending';
 
 // User profile type that matches our expected database structure
 export type UserProfile = {
@@ -15,7 +19,7 @@ export type UserProfile = {
   avatar_url?: string | null;
   phone?: string | null;
   address?: string | null;
-  status: 'active' | 'inactive' | 'pending';
+  status: UserStatus;
   created_at: string;
   updated_at: string;
 };
@@ -139,12 +143,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Login successful:', data);
       if (data.user) {
         // Mock profile check for now
-        const mockProfile = {
+        const mockProfile: UserProfile = {
           id: data.user.id,
           name: 'Demo User',
           email: data.user.email,
           role: 'admin' as UserRole,
-          status: 'active' as const,
+          status: 'active' as UserStatus,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         };
