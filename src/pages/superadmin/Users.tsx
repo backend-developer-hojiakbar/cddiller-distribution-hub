@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -239,7 +238,7 @@ const UsersPage = () => {
   const handleAddUser = async (values: AddUserFormValues) => {
     try {
       // First, create the auth user
-      const { data, error } = await supabase.auth.signUp({
+      const authResponse = await supabase.auth.signUp({
         email: values.email,
         password: values.password,
         options: {
@@ -250,17 +249,17 @@ const UsersPage = () => {
         }
       });
       
-      if (error) {
-        console.error('Error creating user:', error);
+      if (authResponse.error) {
+        console.error('Error creating user:', authResponse.error);
         toast({
           title: 'Error creating user',
-          description: error.message,
+          description: authResponse.error.message,
           variant: 'destructive',
         });
         return;
       }
       
-      if (!data.user) {
+      if (!authResponse.data.user) {
         toast({
           title: 'Error creating user',
           description: 'Failed to create user. Please try again.',
@@ -270,10 +269,10 @@ const UsersPage = () => {
       }
       
       // Now create the profile (in case the trigger doesn't work)
-      const { error: profileError } = await supabase
+      const profileResponse = await supabase
         .from('profiles')
         .insert([{
-          id: data.user.id,
+          id: authResponse.data.user.id,
           name: values.name,
           email: values.email,
           role: values.role,
@@ -284,8 +283,8 @@ const UsersPage = () => {
           updated_at: new Date().toISOString()
         }]);
         
-      if (profileError) {
-        console.error('Error creating profile:', profileError);
+      if (profileResponse.error) {
+        console.error('Error creating profile:', profileResponse.error);
         toast({
           title: 'Warning',
           description: 'User created but there might be an issue with the profile.',

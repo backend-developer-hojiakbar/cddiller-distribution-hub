@@ -160,7 +160,10 @@ export const supabase = {
             };
           },
           order: (column, options) => {
-            return {
+            // Important: Added data and error properties here
+            const result = {
+              data: null,
+              error: null,
               range: (from, to) => {
                 // Mock implementation for specific tables
                 if (table === 'profiles') {
@@ -188,6 +191,7 @@ export const supabase = {
                 return Promise.resolve({ data: [], error: null });
               }
             };
+            return result;
           }
         };
       },
@@ -224,7 +228,9 @@ export const supabase = {
                 return Promise.resolve({ data: rows[0], error: null });
               }
             };
-          }
+          },
+          // Add error property directly to the insert method
+          error: null
         };
       },
       update: (updates) => {
@@ -253,9 +259,13 @@ export const supabase = {
                     return Promise.resolve({ data: null, error: null });
                   }
                 };
-              }
+              },
+              // Add error property directly to the eq method
+              error: null
             };
-          }
+          },
+          // Add error property directly to the update method
+          error: null
         };
       },
       delete: () => {
@@ -269,9 +279,13 @@ export const supabase = {
               }
             }
             return Promise.resolve({ error: null });
-          }
+          },
+          // Add error property directly to the delete method
+          error: null
         };
-      }
+      },
+      // Add error property directly to the from method
+      error: null
     };
   }
 };
