@@ -1,7 +1,5 @@
 
-// This file is maintained for backward compatibility but just re-exports the main client
-import { supabase } from '@/integrations/supabase/client';
-export { supabase };
+// Types for our application data model
 
 // Database types - representing our tables
 export type User = {
